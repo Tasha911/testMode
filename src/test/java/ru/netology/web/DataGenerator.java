@@ -1,0 +1,80 @@
+package ru.netology.web;
+
+import com.github.javafaker.Faker;
+import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.filter.log.LogDetail;
+import io.restassured.http.ContentType;
+import io.restassured.specification.RequestSpecification;
+import lombok.Value;
+
+import java.util.Locale;
+
+import static io.restassured.RestAssured.given;
+
+public class DataGenerator {
+    private static final RequestSpecification requestSpec = new RequestSpecBuilder()
+            .setBaseUri("http://localhost")
+            .setPort(9999)
+            .setAccept(ContentType.JSON)
+            .setContentType(ContentType.JSON)
+            .log(LogDetail.ALL)
+            .build();
+
+    private static final Faker faker = new Faker(new Locale("en"));
+
+    public static final String CREATE_USER_ENDPOINT = "/api/system/users";
+
+    private DataGenerator() {
+    }
+
+    private static void sendRequest(RegistrationDto user) {
+        given() // "дано"
+                .spec(requestSpec) // указываем, какую спецификацию используем
+                // передаём в теле объект, который будет преобразован в JSON
+                .body(user)
+                .when() // "когда"
+                // на какой путь относительно BaseUri отправляем запрос
+                .post(CREATE_USER_ENDPOINT)
+                .then() // "тогда ожидаем"
+                .statusCode(200); // код 200 OK
+    }
+
+    public static String getRandomLogin() {
+        return faker.name().username();
+    }
+
+    public static String getRandomPassword() {
+        return faker.internet().password();
+    }
+
+    public static class Registration {
+        private Registration() {
+        }
+
+        public static RegistrationDto getUser(String status) {
+            // создать Пользователя user используя методы getRandomLogin(), getRandomPassword() и параметр status
+            return new RegistrationDto(
+                    getRandomLogin(),
+                    getRandomPassword(),
+                    status
+            );
+        }
+
+        public static RegistrationDto getRegisteredUser(String status) {
+            // Послать запрос на регистрацию пользователя с помощью вызова sendRequest(registeredUser)
+            RegistrationDto registeredUser = getUser(status);
+            sendRequest(registeredUser);
+            return registeredUser;
+        }
+    }
+
+    @Value
+    public static class RegistrationDto {
+        public static final String STATUS_ACTIVE = "active";
+        public static final String STATUS_BLOCKED = "blocked";
+
+        String login;
+        String password;
+        String status;
+    }
+}
